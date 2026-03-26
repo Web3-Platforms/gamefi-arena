@@ -1,12 +1,13 @@
 import { pgTable, text, real, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+import { fightersTable } from "./fighters";
 
 export const trainingTypeEnum = pgEnum("training_type", ["BASIC", "ADVANCED", "INTENSIVE", "AI_OPTIMIZED"]);
 
 export const trainingSessionsTable = pgTable("training_sessions", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  fighterId: text("fighter_id").notNull(),
+  fighterId: text("fighter_id").notNull().references(() => fightersTable.id, { onDelete: "cascade" }),
   type: trainingTypeEnum("type").notNull(),
   statImproved: text("stat_improved"),
   improvement: real("improvement").notNull().default(0),

@@ -126,10 +126,10 @@ export default function WalletPage() {
           ) : (
             <div className="space-y-3">
               {transactions.map(tx => {
-                const isPositive = ["BATTLE_REWARD", "STAKING_REWARD", "UNSTAKE"].includes(tx.type);
-                const isTransfer = tx.type === "STAKE" || tx.type === "UNSTAKE";
-                const colorClass = isTransfer ? "text-blue-400" : (isPositive ? "text-accent" : "text-destructive");
-                const sign = isPositive || isTransfer ? "+" : "-";
+                const isCredit = tx.amount > 0;
+                const isNeutral = tx.type === "STAKE";
+                const colorClass = isNeutral ? "text-blue-400" : (isCredit ? "text-accent" : "text-destructive");
+                const sign = isCredit ? "+" : "-";
                 
                 return (
                   <div key={tx.id} className="flex items-center justify-between p-4 bg-card/60 border border-white/5 hover:bg-card transition-colors">
@@ -143,7 +143,7 @@ export default function WalletPage() {
                       </div>
                     </div>
                     <div className={cn("font-mono text-lg font-bold", colorClass)}>
-                      {sign}{tx.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      {sign}{Math.abs(tx.amount).toLocaleString(undefined, { maximumFractionDigits: 4 })} ONE
                     </div>
                   </div>
                 )

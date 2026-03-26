@@ -51,7 +51,7 @@ router.get("/auth/session", async (req, res) => {
   try {
     const walletAddress = getWalletFromCookie(req);
     if (!walletAddress) {
-      return res.json(null);
+      return res.status(204).end();
     }
 
     const user = await db.query.usersTable.findFirst({
@@ -59,7 +59,7 @@ router.get("/auth/session", async (req, res) => {
     });
 
     if (!user) {
-      return res.json(null);
+      return res.status(204).end();
     }
 
     const wallet = await db.query.walletsTable.findFirst({
