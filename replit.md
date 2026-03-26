@@ -83,6 +83,26 @@ Round-by-round simulation: attack damage is calculated from power × 120 + aggre
 - Training costs: 5/15/30/50 ONE (BASIC/ADVANCED/INTENSIVE/AI_OPTIMIZED)
 - Staking rewards: 5% on unstake
 
+## Authentication Model
+
+AI Arena uses a **simulated wallet session** (no real blockchain or JWT):
+
+- On `/connect`, users enter any wallet address string (e.g. `0xABC...`) → server creates a `users` row and a `wallets` row with 100 ONE starting balance.
+- A session cookie (`ai_arena_wallet`) is set: `HttpOnly; SameSite=Lax; Max-Age=86400`.
+  In production (`NODE_ENV=production`), the `Secure` flag is also added.
+- `GET /api/auth/session` returns **200 + session JSON** if authenticated, or **204 No Content** if no valid session exists.
+- All protected routes use `requireUser()` which reads the cookie, looks up the user/wallet, and returns 401 if missing.
+
+> For a production blockchain integration, replace `setWalletCookie` with a proper signing/SIWE flow and add CSRF protection.
+
+## Smoke Testing
+
+Run the end-to-end smoke test script (requires API server running):
+```bash
+bash scripts/smoke-test.sh
+```
+This verifies: session 204/200, mint, train, battle, transaction history, platform stats.
+
 ## TypeScript & Composite Projects
 
 Every package extends `tsconfig.base.json` which sets `composite: true`. Run `pnpm run typecheck` from root for full type checking.
