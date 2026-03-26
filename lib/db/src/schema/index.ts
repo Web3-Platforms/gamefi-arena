@@ -4,3 +4,4 @@ export * from "./battles";
 export * from "./wallets";
 export * from "./transactions";
 export * from "./training";
+export * from "./sessions";

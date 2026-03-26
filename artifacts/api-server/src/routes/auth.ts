@@ -3,7 +3,13 @@ import { db } from "@workspace/db";
 import { usersTable, walletsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { ConnectWalletBody } from "@workspace/api-zod";
-import { getWalletFromCookie, setWalletCookie, clearWalletCookie } from "../lib/session";
+import {
+  createSession,
+  getSessionUser,
+  deleteSession,
+  setSessionCookie,
+  clearSessionCookie,
+} from "../lib/session";
 
 const router: IRouter = Router();
 
@@ -39,7 +45,8 @@ router.post("/auth/connect", async (req, res) => {
       wallet = created!;
     }
 
-    setWalletCookie(res, walletAddress);
+    const sessionId = await createSession(user.id);
+    setSessionCookie(res, sessionId);
     res.json({ user, wallet, isNew });
   } catch (err) {
     req.log.error({ err }, "Error connecting wallet");
@@ -49,13 +56,13 @@ router.post("/auth/connect", async (req, res) => {
 
 router.get("/auth/session", async (req, res) => {
   try {
-    const walletAddress = getWalletFromCookie(req);
-    if (!walletAddress) {
+    const auth = await getSessionUser(req);
+    if (!auth) {
       return res.status(204).end();
     }
 
     const user = await db.query.usersTable.findFirst({
-      where: eq(usersTable.walletAddress, walletAddress),
+      where: eq(usersTable.id, auth.userId),
     });
 
     if (!user) {
@@ -74,7 +81,8 @@ router.get("/auth/session", async (req, res) => {
 });
 
 router.post("/auth/disconnect", async (req, res) => {
-  clearWalletCookie(res);
+  await deleteSession(req);
+  clearSessionCookie(res);
   res.json({ message: "Disconnected" });
 });
 

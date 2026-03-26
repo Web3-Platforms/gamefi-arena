@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { usersTable, walletsTable, fightersTable, transactionsTable } from "@workspace/db";
+import { fightersTable, transactionsTable, walletsTable } from "@workspace/db";
 import { eq, and, like } from "drizzle-orm";
 import { MintFighterBody } from "@workspace/api-zod";
-import { getWalletFromCookie } from "../lib/session";
+import { getSessionUser } from "../lib/session";
 
 const router: IRouter = Router();
 
@@ -27,26 +27,12 @@ function randomStat(base = 0.3): number {
 }
 
 async function requireUser(req: Request, res: Response): Promise<{ userId: string; walletId: string } | null> {
-  const walletAddress = getWalletFromCookie(req);
-  if (!walletAddress) {
+  const auth = await getSessionUser(req);
+  if (!auth) {
     res.status(401).json({ error: "Not authenticated" });
     return null;
   }
-  const user = await db.query.usersTable.findFirst({
-    where: eq(usersTable.walletAddress, walletAddress),
-  });
-  if (!user) {
-    res.status(401).json({ error: "User not found" });
-    return null;
-  }
-  const wallet = await db.query.walletsTable.findFirst({
-    where: eq(walletsTable.userId, user.id),
-  });
-  if (!wallet) {
-    res.status(401).json({ error: "Wallet not found" });
-    return null;
-  }
-  return { userId: user.id, walletId: wallet.id };
+  return auth;
 }
 
 router.get("/fighters", async (req, res) => {

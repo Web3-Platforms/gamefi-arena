@@ -85,15 +85,15 @@ Round-by-round simulation: attack damage is calculated from power × 120 + aggre
 
 ## Authentication Model
 
-AI Arena uses a **simulated wallet session** (no real blockchain or JWT):
+AI Arena uses **server-side session tokens** (not raw wallet addresses in cookies):
 
-- On `/connect`, users enter any wallet address string (e.g. `0xABC...`) → server creates a `users` row and a `wallets` row with 100 ONE starting balance.
-- A session cookie (`ai_arena_wallet`) is set: `HttpOnly; SameSite=Lax; Max-Age=86400`.
-  In production (`NODE_ENV=production`), the `Secure` flag is also added.
-- `GET /api/auth/session` returns **200 + session JSON** if authenticated, or **204 No Content** if no valid session exists.
-- All protected routes use `requireUser()` which reads the cookie, looks up the user/wallet, and returns 401 if missing.
+- On `POST /auth/connect`, users supply a wallet address → server creates/loads user + wallet, generates an opaque session UUID stored in the `sessions` DB table, and sets an HttpOnly cookie (`ai_arena_sid`) containing only the session ID.
+- `GET /api/auth/session` validates the session ID against the DB (checking expiry), and returns **200 + session JSON** or **204 No Content** if invalid/missing.
+- All protected routes use `requireUser()` → `getSessionUser()` which queries the sessions table; a forged or expired session ID returns 401.
+- Sessions expire after 7 days. `POST /auth/disconnect` deletes the session from DB and clears the cookie.
+- In production (`NODE_ENV=production`), the `Secure` flag is added to the cookie.
 
-> For a production blockchain integration, replace `setWalletCookie` with a proper signing/SIWE flow and add CSRF protection.
+> For production blockchain integration, replace the wallet-address input with a SIWE (Sign-In With Ethereum) flow and add CSRF tokens.
 
 ## Smoke Testing
 

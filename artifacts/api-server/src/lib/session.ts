@@ -1,29 +1,71 @@
 import { Request, Response } from "express";
+import { db } from "@workspace/db";
+import { sessionsTable, walletsTable, usersTable } from "@workspace/db";
+import { eq, and, gt } from "drizzle-orm";
 
-const COOKIE_NAME = "ai_arena_wallet";
+const COOKIE_NAME = "ai_arena_sid";
+const SESSION_TTL_DAYS = 7;
+const isProduction = process.env.NODE_ENV === "production";
+const SECURE_FLAG = isProduction ? "; Secure" : "";
 
-export function getWalletFromCookie(req: Request): string | null {
+export async function createSession(userId: string): Promise<string> {
+  const expiresAt = new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+  const [session] = await db
+    .insert(sessionsTable)
+    .values({ userId, expiresAt })
+    .returning();
+  return session!.id;
+}
+
+export async function getSessionUser(
+  req: Request
+): Promise<{ userId: string; walletId: string } | null> {
   const cookieHeader = req.headers.cookie ?? "";
   const cookies = Object.fromEntries(
     cookieHeader.split(";").map((c) => {
       const [k, ...v] = c.trim().split("=");
-      return [k?.trim() ?? "", v.join("=")];
+      return [k?.trim() ?? "", decodeURIComponent(v.join("="))];
     })
   );
-  return cookies[COOKIE_NAME] ? decodeURIComponent(cookies[COOKIE_NAME]!) : null;
+  const sessionId = cookies[COOKIE_NAME];
+  if (!sessionId) return null;
+
+  const now = new Date();
+  const session = await db.query.sessionsTable.findFirst({
+    where: and(eq(sessionsTable.id, sessionId), gt(sessionsTable.expiresAt, now)),
+  });
+  if (!session) return null;
+
+  const wallet = await db.query.walletsTable.findFirst({
+    where: eq(walletsTable.userId, session.userId),
+  });
+  if (!wallet) return null;
+
+  return { userId: session.userId, walletId: wallet.id };
 }
 
-const isProduction = process.env.NODE_ENV === "production";
-const SECURE_FLAG = isProduction ? "; Secure" : "";
+export async function deleteSession(req: Request): Promise<void> {
+  const cookieHeader = req.headers.cookie ?? "";
+  const cookies = Object.fromEntries(
+    cookieHeader.split(";").map((c) => {
+      const [k, ...v] = c.trim().split("=");
+      return [k?.trim() ?? "", decodeURIComponent(v.join("="))];
+    })
+  );
+  const sessionId = cookies[COOKIE_NAME];
+  if (sessionId) {
+    await db.delete(sessionsTable).where(eq(sessionsTable.id, sessionId));
+  }
+}
 
-export function setWalletCookie(res: Response, walletAddress: string): void {
+export function setSessionCookie(res: Response, sessionId: string): void {
   res.setHeader(
     "Set-Cookie",
-    `${COOKIE_NAME}=${encodeURIComponent(walletAddress)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400${SECURE_FLAG}`
+    `${COOKIE_NAME}=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_TTL_DAYS * 86400}${SECURE_FLAG}`
   );
 }
 
-export function clearWalletCookie(res: Response): void {
+export function clearSessionCookie(res: Response): void {
   res.setHeader(
     "Set-Cookie",
     `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${SECURE_FLAG}`
