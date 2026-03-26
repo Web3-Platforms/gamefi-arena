@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { db } from "@workspace/db";
-import { sessionsTable, walletsTable, usersTable } from "@workspace/db";
+import { sessionsTable, walletsTable } from "@workspace/db";
 import { eq, and, gt } from "drizzle-orm";
 
 const COOKIE_NAME = "ai_arena_sid";
@@ -20,14 +20,7 @@ export async function createSession(userId: string): Promise<string> {
 export async function getSessionUser(
   req: Request
 ): Promise<{ userId: string; walletId: string } | null> {
-  const cookieHeader = req.headers.cookie ?? "";
-  const cookies = Object.fromEntries(
-    cookieHeader.split(";").map((c) => {
-      const [k, ...v] = c.trim().split("=");
-      return [k?.trim() ?? "", decodeURIComponent(v.join("="))];
-    })
-  );
-  const sessionId = cookies[COOKIE_NAME];
+  const sessionId = req.cookies?.[COOKIE_NAME] as string | undefined;
   if (!sessionId) return null;
 
   const now = new Date();
@@ -45,14 +38,7 @@ export async function getSessionUser(
 }
 
 export async function deleteSession(req: Request): Promise<void> {
-  const cookieHeader = req.headers.cookie ?? "";
-  const cookies = Object.fromEntries(
-    cookieHeader.split(";").map((c) => {
-      const [k, ...v] = c.trim().split("=");
-      return [k?.trim() ?? "", decodeURIComponent(v.join("="))];
-    })
-  );
-  const sessionId = cookies[COOKIE_NAME];
+  const sessionId = req.cookies?.[COOKIE_NAME] as string | undefined;
   if (sessionId) {
     await db.delete(sessionsTable).where(eq(sessionsTable.id, sessionId));
   }
