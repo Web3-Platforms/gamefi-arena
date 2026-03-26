@@ -85,19 +85,15 @@ router.post("/battles", async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Insufficient balance. Entry fee is ${ENTRY_FEE} ONE.` });
     }
 
-    // Simulate battle (pure computation, no DB side effects)
     const now = new Date();
     const result = simulateBattle(f1, f2);
 
     const winnerFighter = result.winnerId === fighter1Id ? f1 : f2;
     const loserFighter = result.winnerId === fighter1Id ? f2 : f1;
 
-    // Anti-farming: same-owner battles are break-even (reward = entry fee, no net gain).
-    // Cross-owner battles pay the full WIN_REWARD.
+    // Same-owner battles are break-even (refund = entry fee) to prevent farming
     const isSelfBattle = f1.ownerId === f2.ownerId;
     const effectiveReward = isSelfBattle ? ENTRY_FEE : WIN_REWARD;
-
-    // Wrap all economy + record mutations in a single atomic transaction
     const fullBattle = await db.transaction(async (tx) => {
       const [battle] = await tx
         .insert(battlesTable)
@@ -159,9 +155,6 @@ router.post("/battles", async (req: Request, res: Response) => {
         battleId: battle!.id,
       });
 
-      // Credit effectiveReward to the winning fighter's owner.
-      // For same-owner battles (self-battle), effectiveReward = ENTRY_FEE (break-even, anti-farming).
-      // For cross-owner battles, effectiveReward = WIN_REWARD (full prize).
       const winnerWallet = await tx.query.walletsTable.findFirst({
         where: eq(walletsTable.userId, winnerFighter.ownerId),
       });

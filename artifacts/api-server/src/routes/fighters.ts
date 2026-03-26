@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { usersTable, walletsTable, fightersTable, transactionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, like } from "drizzle-orm";
 import { MintFighterBody } from "@workspace/api-zod";
 import { getWalletFromCookie } from "../lib/session";
 
@@ -103,7 +103,14 @@ router.post("/fighters", async (req, res) => {
     const tokenId = genTokenId();
     const color = body.color ?? `hsl(${Math.floor(Math.random() * 360)}, 70%, 60%)`;
 
-    // Wrap fighter mint + wallet debit + transaction in a single DB transaction
+    // Auto-suffix name to ensure uniqueness per owner (e.g. "Zeus" → "Zeus #2")
+    const baseName = body.name.trim();
+    const existingCount = await db
+      .select()
+      .from(fightersTable)
+      .where(and(eq(fightersTable.ownerId, auth.userId), like(fightersTable.name, `${baseName}%`)));
+    const uniqueName = existingCount.length > 0 ? `${baseName} #${existingCount.length + 1}` : baseName;
+
     const fighter = await db.transaction(async (tx) => {
       const wallet = await tx.query.walletsTable.findFirst({
         where: eq(walletsTable.id, auth.walletId),
@@ -116,7 +123,7 @@ router.post("/fighters", async (req, res) => {
         .insert(fightersTable)
         .values({
           tokenId,
-          name: body.name,
+          name: uniqueName,
           description: body.description ?? null,
           ownerId: auth.userId,
           aggression: randomStat(),
@@ -144,7 +151,7 @@ router.post("/fighters", async (req, res) => {
         walletId: auth.walletId,
         type: "MINT_FIGHTER",
         amount: -MINT_COST,
-        description: `Minted fighter: ${body.name}`,
+        description: `Minted fighter: ${uniqueName}`,
         fighterId: newFighter!.id,
       });
 
