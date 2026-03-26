@@ -17,12 +17,13 @@ export default function ArenaPage() {
   const [activeBattle, setActiveBattle] = useState<Battle | null>(null);
 
   const myFighters = myFightersData?.fighters || [];
-  // All fighters (including own) are valid opponents — important for single-wallet demo
   const allFighters = allFightersData?.fighters || [];
-  // Opponents: exclude the fighter already selected as fighter 1
-  const opponents = selectedFighter1
-    ? allFighters.filter(f => f.id !== selectedFighter1)
-    : allFighters;
+  const opponents = allFighters.filter(f => f.id !== selectedFighter1);
+
+  const handleSelectFighter1 = (id: string) => {
+    setSelectedFighter1(id);
+    if (selectedFighter2 === id) setSelectedFighter2(null);
+  };
 
   const handleBattle = () => {
     if (!selectedFighter1 || !selectedFighter2) return;
@@ -70,7 +71,7 @@ export default function ArenaPage() {
                     fighter={f} 
                     compact 
                     selected={selectedFighter1 === f.id}
-                    onClick={() => setSelectedFighter1(f.id)}
+                    onClick={() => handleSelectFighter1(f.id)}
                   />
                 ))
               )}
