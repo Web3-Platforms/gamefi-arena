@@ -91,7 +91,11 @@ router.post("/battles", async (req: Request, res: Response) => {
 
     const winnerFighter = result.winnerId === fighter1Id ? f1 : f2;
     const loserFighter = result.winnerId === fighter1Id ? f2 : f1;
-    const requesterWon = result.winnerId === fighter1Id;
+
+    // Anti-farming: same-owner battles are break-even (reward = entry fee, no net gain).
+    // Cross-owner battles pay the full WIN_REWARD.
+    const isSelfBattle = f1.ownerId === f2.ownerId;
+    const effectiveReward = isSelfBattle ? ENTRY_FEE : WIN_REWARD;
 
     // Wrap all economy + record mutations in a single atomic transaction
     const fullBattle = await db.transaction(async (tx) => {
@@ -107,7 +111,7 @@ router.post("/battles", async (req: Request, res: Response) => {
           fighter2FinalHp: result.fighter2FinalHp,
           battleLog: result.rounds,
           prizePool: ENTRY_FEE,
-          winnerReward: WIN_REWARD,
+          winnerReward: effectiveReward,
           status: "COMPLETED",
           startedAt: now,
           completedAt: now,
@@ -155,7 +159,9 @@ router.post("/battles", async (req: Request, res: Response) => {
         battleId: battle!.id,
       });
 
-      // Credit WIN_REWARD to the winning fighter's owner
+      // Credit effectiveReward to the winning fighter's owner.
+      // For same-owner battles (self-battle), effectiveReward = ENTRY_FEE (break-even, anti-farming).
+      // For cross-owner battles, effectiveReward = WIN_REWARD (full prize).
       const winnerWallet = await tx.query.walletsTable.findFirst({
         where: eq(walletsTable.userId, winnerFighter.ownerId),
       });
@@ -164,8 +170,8 @@ router.post("/battles", async (req: Request, res: Response) => {
         await tx
           .update(walletsTable)
           .set({
-            balance: winnerWallet.balance + WIN_REWARD,
-            totalEarned: winnerWallet.totalEarned + WIN_REWARD,
+            balance: winnerWallet.balance + effectiveReward,
+            totalEarned: winnerWallet.totalEarned + effectiveReward,
             updatedAt: new Date(),
           })
           .where(eq(walletsTable.id, winnerWallet.id));
@@ -173,8 +179,8 @@ router.post("/battles", async (req: Request, res: Response) => {
         await tx.insert(transactionsTable).values({
           walletId: winnerWallet.id,
           type: "BATTLE_REWARD",
-          amount: WIN_REWARD,
-          description: `Victory reward: ${winnerFighter.name} defeated ${loserFighter.name}`,
+          amount: effectiveReward,
+          description: `Victory reward: ${winnerFighter.name} defeated ${loserFighter.name}${isSelfBattle ? " (self-battle)" : ""}`,
           battleId: battle!.id,
         });
       }
