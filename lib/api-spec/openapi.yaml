@@ -3,13 +3,26 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI Arena GameFi API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Wallet authentication
+  - name: fighters
+    description: AI fighter NFT management
+  - name: battles
+    description: Battle arena operations
+  - name: training
+    description: Fighter training
+  - name: wallet
+    description: ONE token wallet operations
+  - name: stats
+    description: Platform statistics
+
 paths:
   /healthz:
     get:
@@ -24,6 +37,281 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/connect:
+    post:
+      operationId: connectWallet
+      tags: [auth]
+      summary: Connect wallet
+      description: Connect or create a user account by wallet address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectWalletRequest"
+      responses:
+        "200":
+          description: Connected successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectWalletResponse"
+
+  /auth/session:
+    get:
+      operationId: getSession
+      tags: [auth]
+      summary: Get current session
+      description: Returns the current user session
+      responses:
+        "200":
+          description: Session data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "204":
+          description: No session
+
+  /auth/disconnect:
+    post:
+      operationId: disconnectWallet
+      tags: [auth]
+      summary: Disconnect wallet
+      description: End current session
+      responses:
+        "200":
+          description: Disconnected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /fighters:
+    get:
+      operationId: listFighters
+      tags: [fighters]
+      summary: List fighters
+      description: List all fighters for the current user
+      responses:
+        "200":
+          description: List of fighters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FighterListResponse"
+
+    post:
+      operationId: mintFighter
+      tags: [fighters]
+      summary: Mint a new fighter
+      description: Mint a new AI fighter NFT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MintFighterRequest"
+      responses:
+        "201":
+          description: Fighter minted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fighter"
+
+  /fighters/all:
+    get:
+      operationId: listAllFighters
+      tags: [fighters]
+      summary: List all fighters
+      description: List all fighters across all users (for battle matchmaking)
+      responses:
+        "200":
+          description: List of all fighters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FighterListResponse"
+
+  /fighters/{id}:
+    get:
+      operationId: getFighter
+      tags: [fighters]
+      summary: Get fighter by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Fighter details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fighter"
+
+  /fighters/{id}/train:
+    post:
+      operationId: trainFighter
+      tags: [training]
+      summary: Train a fighter
+      description: Spend ONE tokens to improve a fighter's AI stats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainFighterRequest"
+      responses:
+        "200":
+          description: Training completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainFighterResponse"
+
+  /battles:
+    get:
+      operationId: listBattles
+      tags: [battles]
+      summary: List battles
+      description: List recent battles
+      responses:
+        "200":
+          description: List of battles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BattleListResponse"
+
+    post:
+      operationId: createBattle
+      tags: [battles]
+      summary: Create and simulate a battle
+      description: Start a battle between two fighters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBattleRequest"
+      responses:
+        "201":
+          description: Battle created and simulated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Battle"
+
+  /battles/{id}:
+    get:
+      operationId: getBattle
+      tags: [battles]
+      summary: Get battle by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Battle details with log
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Battle"
+
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get wallet
+      description: Get current user's ONE token wallet
+      responses:
+        "200":
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/transactions:
+    get:
+      operationId: listTransactions
+      tags: [wallet]
+      summary: List transactions
+      description: List wallet transaction history
+      responses:
+        "200":
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+
+  /wallet/stake:
+    post:
+      operationId: stakeTokens
+      tags: [wallet]
+      summary: Stake ONE tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StakeRequest"
+      responses:
+        "200":
+          description: Staking successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/unstake:
+    post:
+      operationId: unstakeTokens
+      tags: [wallet]
+      summary: Unstake ONE tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StakeRequest"
+      responses:
+        "200":
+          description: Unstaking successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /stats:
+    get:
+      operationId: getPlatformStats
+      tags: [stats]
+      summary: Get platform stats
+      description: Returns overall platform statistics
+      responses:
+        "200":
+          description: Platform statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +322,408 @@ components:
       required:
         - status
 
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    ConnectWalletRequest:
+      type: object
+      properties:
+        walletAddress:
+          type: string
+      required:
+        - walletAddress
+
+    ConnectWalletResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+        isNew:
+          type: boolean
+      required:
+        - user
+        - wallet
+        - isNew
+
+    SessionResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        walletAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - walletAddress
+        - createdAt
+
+    Fighter:
+      type: object
+      properties:
+        id:
+          type: string
+        tokenId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        imageUrl:
+          type: string
+          nullable: true
+        ownerId:
+          type: string
+        aggression:
+          type: number
+          format: float
+        defense:
+          type: number
+          format: float
+        speed:
+          type: number
+          format: float
+        power:
+          type: number
+          format: float
+        intelligence:
+          type: number
+          format: float
+        level:
+          type: integer
+        experience:
+          type: integer
+        wins:
+          type: integer
+        losses:
+          type: integer
+        totalBattles:
+          type: integer
+        trainingCount:
+          type: integer
+        lastTrainedAt:
+          type: string
+          format: date-time
+          nullable: true
+        color:
+          type: string
+        skinId:
+          type: string
+          nullable: true
+        txHash:
+          type: string
+          nullable: true
+        isMinted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - tokenId
+        - name
+        - ownerId
+        - aggression
+        - defense
+        - speed
+        - power
+        - intelligence
+        - level
+        - experience
+        - wins
+        - losses
+        - totalBattles
+        - trainingCount
+        - color
+        - isMinted
+        - createdAt
+        - updatedAt
+
+    FighterListResponse:
+      type: object
+      properties:
+        fighters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fighter"
+      required:
+        - fighters
+
+    MintFighterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        color:
+          type: string
+          nullable: true
+      required:
+        - name
+
+    BattleRound:
+      type: object
+      properties:
+        round:
+          type: integer
+        attacker:
+          type: string
+        defender:
+          type: string
+        damage:
+          type: number
+        fighter1Hp:
+          type: number
+        fighter2Hp:
+          type: number
+        move:
+          type: string
+      required:
+        - round
+        - attacker
+        - defender
+        - damage
+        - fighter1Hp
+        - fighter2Hp
+        - move
+
+    Battle:
+      type: object
+      properties:
+        id:
+          type: string
+        fighter1Id:
+          type: string
+        fighter2Id:
+          type: string
+        fighter1:
+          $ref: "#/components/schemas/Fighter"
+        fighter2:
+          $ref: "#/components/schemas/Fighter"
+        winnerId:
+          type: string
+          nullable: true
+        loserId:
+          type: string
+          nullable: true
+        rounds:
+          type: integer
+        fighter1FinalHp:
+          type: integer
+        fighter2FinalHp:
+          type: integer
+        battleLog:
+          type: array
+          items:
+            $ref: "#/components/schemas/BattleRound"
+          nullable: true
+        prizePool:
+          type: number
+        winnerReward:
+          type: number
+        status:
+          type: string
+          enum: [PENDING, IN_PROGRESS, COMPLETED, CANCELLED]
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - fighter1Id
+        - fighter2Id
+        - fighter1
+        - fighter2
+        - rounds
+        - fighter1FinalHp
+        - fighter2FinalHp
+        - prizePool
+        - winnerReward
+        - status
+        - createdAt
+
+    BattleListResponse:
+      type: object
+      properties:
+        battles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Battle"
+      required:
+        - battles
+
+    CreateBattleRequest:
+      type: object
+      properties:
+        fighter1Id:
+          type: string
+        fighter2Id:
+          type: string
+      required:
+        - fighter1Id
+        - fighter2Id
+
+    TrainFighterRequest:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [BASIC, ADVANCED, INTENSIVE, AI_OPTIMIZED]
+        stat:
+          type: string
+          enum: [aggression, defense, speed, power, intelligence]
+      required:
+        - type
+        - stat
+
+    TrainFighterResponse:
+      type: object
+      properties:
+        fighter:
+          $ref: "#/components/schemas/Fighter"
+        improvement:
+          type: number
+        cost:
+          type: number
+        statImproved:
+          type: string
+      required:
+        - fighter
+        - improvement
+        - cost
+        - statImproved
+
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        balance:
+          type: number
+        totalEarned:
+          type: number
+        totalSpent:
+          type: number
+        stakedAmount:
+          type: number
+        stakingRewards:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - balance
+        - totalEarned
+        - totalSpent
+        - stakedAmount
+        - stakingRewards
+        - createdAt
+        - updatedAt
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+        walletId:
+          type: string
+        type:
+          type: string
+          enum: [MINT_FIGHTER, TRAIN_FIGHTER, BATTLE_REWARD, BATTLE_ENTRY, STAKE, UNSTAKE, STAKING_REWARD]
+        amount:
+          type: number
+        description:
+          type: string
+          nullable: true
+        battleId:
+          type: string
+          nullable: true
+        fighterId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - walletId
+        - type
+        - amount
+        - createdAt
+
+    TransactionListResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+      required:
+        - transactions
+
+    StakeRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+      required:
+        - amount
+
+    PlatformStats:
+      type: object
+      properties:
+        totalFighters:
+          type: integer
+        totalBattles:
+          type: integer
+        totalUsers:
+          type: integer
+        totalOneDistributed:
+          type: number
+        topFighters:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fighter"
+      required:
+        - totalFighters
+        - totalBattles
+        - totalUsers
+        - totalOneDistributed
+        - topFighters

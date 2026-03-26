@@ -1,0 +1,10 @@
+packages:
+  "framer-motion": "Animations for battle log replay and page transitions"
+  "clsx": "Class name merging"
+  "tailwind-merge": "Tailwind specific class merging"
+images:
+  - path: "artifacts/ai-arena/public/images/hero-bg.png"
+    description: "Dark cyberpunk grid arena background with neon pink and cyan lights, glowing volumetric fog, futuristic stadium"
+    aspect_ratio: "16:9"
+notes:
+  - "Using generated TanStack Query hooks from @workspace/api-client-react"

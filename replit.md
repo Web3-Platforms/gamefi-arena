@@ -1,8 +1,8 @@
-# Workspace
+# AI Arena — GameFi Platform
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+AI Arena is a GameFi platform for the OneHack 3.0 hackathon. Players mint AI-powered NFT fighters, train their neural network stats, battle other fighters, and earn ONE tokens.
 
 ## Stack
 
@@ -15,82 +15,101 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui + framer-motion
 
 ## Structure
 
 ```text
 artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
+├── artifacts/
+│   ├── api-server/         # Express API server (port 8080, path /api)
+│   └── ai-arena/           # React + Vite frontend (port 25941, path /)
+├── lib/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── scripts/                # Utility scripts
+├── pnpm-workspace.yaml
+├── tsconfig.base.json
+├── tsconfig.json
+└── package.json
 ```
+
+## AI Arena Features
+
+### Pages
+- **/** — Home/HQ: platform stats, top fighters leaderboard, hero section
+- **/connect** — Wallet connect (simulated — any string becomes a wallet address)
+- **/fighters** — My Roster: list fighters, mint new AI fighters (costs 10 ONE)
+- **/arena** — Battle Arena: pick fighters, watch animated combat log replay
+- **/training** — Training Center: spend ONE to improve fighter stats
+- **/wallet** — Wallet: balance, staked tokens, transaction history
+
+### Database Schema (Drizzle)
+- `users` — wallet address + account
+- `fighters` — NFT fighters with AI stats (aggression, defense, speed, power, intelligence)
+- `battles` — battle records with full round-by-round battleLog JSON
+- `wallets` — ONE token balances (staking support)
+- `transactions` — full ledger (mint, train, battle entry/reward, stake/unstake)
+- `training_sessions` — training history
+
+### API Routes (Express at /api)
+- `POST /api/auth/connect` — Connect wallet (create/load user + wallet)
+- `GET /api/auth/session` — Get current session via cookie
+- `POST /api/auth/disconnect` — End session
+- `GET /api/fighters` — List user's fighters
+- `POST /api/fighters` — Mint fighter (costs 10 ONE)
+- `GET /api/fighters/all` — All fighters (for battle matchmaking)
+- `GET /api/fighters/:id` — Get fighter details
+- `POST /api/fighters/:id/train` — Train fighter (BASIC/ADVANCED/INTENSIVE/AI_OPTIMIZED)
+- `GET /api/battles` — Battle history
+- `POST /api/battles` — Create + simulate battle
+- `GET /api/battles/:id` — Battle details + log
+- `GET /api/wallet` — Wallet balance
+- `GET /api/wallet/transactions` — Transaction history
+- `POST /api/wallet/stake` — Stake ONE tokens (5% reward on unstake)
+- `POST /api/wallet/unstake` — Unstake + claim rewards
+- `GET /api/stats` — Platform-wide statistics
+
+### AI Combat Engine (artifacts/api-server/src/lib/combat.ts)
+Round-by-round simulation: attack damage is calculated from power × 120 + aggression × 80 + speed × 40, minus defender's defense × 90 + intelligence × 30. Critical hits triggered by intelligence stat. Speed determines who strikes first each round.
+
+### Token Economics
+- Starting balance: 100 ONE
+- Mint cost: 10 ONE
+- Battle entry fee: 5 ONE
+- Battle win reward: 15 ONE
+- Training costs: 5/15/30/50 ONE (BASIC/ADVANCED/INTENSIVE/AI_OPTIMIZED)
+- Staking rewards: 5% on unstake
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+Every package extends `tsconfig.base.json` which sets `composite: true`. Run `pnpm run typecheck` from root for full type checking.
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## Codegen
 
-## Root Scripts
+Run: `pnpm --filter @workspace/api-spec run codegen`
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+This generates React Query hooks to `lib/api-client-react/src/generated/` and Zod schemas to `lib/api-zod/src/generated/`.
+
+## Database
+
+Development: `pnpm --filter @workspace/db run push`
 
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)
+Express 5 API server. Routes in `src/routes/`. Auth via HTTP cookies.
+- `pnpm --filter @workspace/api-server run dev` — dev server
+- `pnpm --filter @workspace/api-server run build` — esbuild bundle
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+### `artifacts/ai-arena` (`@workspace/ai-arena`)
+React + Vite frontend. Dark cyberpunk GameFi theme.
+- `pnpm --filter @workspace/ai-arena run dev` — dev server
 
 ### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+Drizzle ORM with PostgreSQL. All tables defined in `src/schema/`.
 
 ### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+OpenAPI 3.1 spec + Orval codegen configuration.
