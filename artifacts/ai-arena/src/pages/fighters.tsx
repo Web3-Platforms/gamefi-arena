@@ -96,7 +96,7 @@ export default function FightersPage() {
             Neural stats (Aggression, Defense, Speed, Power, Intelligence) will be initialized with random base values.
           </div>
 
-          <CyberButton type="submit" className="w-full mt-6" disabled={isPending || !mintName.trim()}>
+          <CyberButton type="submit" className="w-full mt-6" disabled={isMinting || !mintName.trim()}>
             {isMinting ? "Initializing..." : "Mint NFT (Cost: Free)"}
           </CyberButton>
         </form>

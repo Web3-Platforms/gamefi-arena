@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMyFighters, useTrainFighterHook } from "@/hooks/use-fighters";
 import { CyberButton } from "@/components/CyberUI";
 import { FighterCard } from "@/components/FighterCard";
-import { Dumbbell, Zap, Shield, Target, Brain } from "lucide-react";
+import { Dumbbell, Zap, Shield, Target, Brain, Bot, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STATS = [

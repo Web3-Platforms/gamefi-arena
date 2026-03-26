@@ -130,17 +130,28 @@ router.post("/battles", async (req, res) => {
         .where(eq(fightersTable.id, loserFighter.id)),
     ]);
 
+    // Determine if the requester (who owns fighter1) won or lost
+    const requesterWon = result.winnerId === fighter1Id;
+    const balanceDelta = requesterWon ? WIN_REWARD - ENTRY_FEE : -ENTRY_FEE;
+
     await db
       .update(walletsTable)
       .set({
-        balance: wallet.balance - ENTRY_FEE + WIN_REWARD,
-        totalEarned: wallet.totalEarned + WIN_REWARD,
+        balance: wallet.balance + balanceDelta,
+        totalEarned: requesterWon ? wallet.totalEarned + WIN_REWARD : wallet.totalEarned,
         totalSpent: wallet.totalSpent + ENTRY_FEE,
         updatedAt: new Date(),
       })
       .where(eq(walletsTable.id, auth.walletId));
 
-    await db.insert(transactionsTable).values([
+    // Always record entry fee transaction; only record win reward if requester won
+    const transactions: Array<{
+      walletId: string;
+      type: "BATTLE_ENTRY" | "BATTLE_REWARD";
+      amount: number;
+      description: string;
+      battleId: string;
+    }> = [
       {
         walletId: auth.walletId,
         type: "BATTLE_ENTRY",
@@ -148,14 +159,19 @@ router.post("/battles", async (req, res) => {
         description: `Battle entry: ${f1.name} vs ${f2.name}`,
         battleId: battle!.id,
       },
-      {
+    ];
+
+    if (requesterWon) {
+      transactions.push({
         walletId: auth.walletId,
         type: "BATTLE_REWARD",
         amount: WIN_REWARD,
         description: `Victory reward: ${winnerFighter.name} won!`,
         battleId: battle!.id,
-      },
-    ]);
+      });
+    }
+
+    await db.insert(transactionsTable).values(transactions);
 
     const fullBattle = await db.query.battlesTable.findFirst({
       where: eq(battlesTable.id, battle!.id),

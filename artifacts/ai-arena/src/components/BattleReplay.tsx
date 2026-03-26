@@ -20,12 +20,13 @@ export function BattleReplay({ battle, onComplete }: BattleReplayProps) {
     if (roundIdx < logs.length) {
       const timer = setTimeout(() => {
         setRoundIdx((r) => r + 1);
-      }, roundIdx === -1 ? 1500 : 1800); // initial delay, then 1.8s per round
+      }, roundIdx === -1 ? 1500 : 1800);
       return () => clearTimeout(timer);
     } else if (!isFinished) {
       const finishTimer = setTimeout(() => setIsFinished(true), 1500);
       return () => clearTimeout(finishTimer);
     }
+    return undefined;
   }, [roundIdx, logs.length, isFinished]);
 
   const currentLog = roundIdx >= 0 && roundIdx < logs.length ? logs[roundIdx] : null;

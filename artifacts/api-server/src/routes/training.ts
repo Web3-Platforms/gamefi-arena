@@ -7,11 +7,13 @@ import { requireUser } from "./fighters";
 
 const router: IRouter = Router();
 
-const TRAINING_CONFIG = {
+type TrainingType = "BASIC" | "ADVANCED" | "INTENSIVE" | "AI_OPTIMIZED";
+
+const TRAINING_CONFIG: Record<TrainingType, { cost: number; improvement: number; label: string }> = {
   BASIC: { cost: 5, improvement: 0.02, label: "Basic Training" },
   ADVANCED: { cost: 15, improvement: 0.05, label: "Advanced Training" },
-  INTENSIVE: { cost: 30, improvement: 0.08, label: "Intensive Training" },
-  AI_OPTIMIZED: { cost: 50, improvement: 0.12, label: "AI-Optimized Training" },
+  INTENSIVE: { cost: 30, improvement: 0.12, label: "Intensive Training" },
+  AI_OPTIMIZED: { cost: 50, improvement: 0.25, label: "AI-Optimized Training" },
 };
 
 router.post("/fighters/:id/train", async (req, res) => {
@@ -34,7 +36,8 @@ router.post("/fighters/:id/train", async (req, res) => {
       return res.status(403).json({ error: "You don't own this fighter" });
     }
 
-    const config = TRAINING_CONFIG[type];
+    const trainingType = type as TrainingType;
+    const config = TRAINING_CONFIG[trainingType];
     if (!config) {
       return res.status(400).json({ error: "Invalid training type" });
     }
@@ -50,8 +53,10 @@ router.post("/fighters/:id/train", async (req, res) => {
     }
 
     const currentVal = fighter[stat as keyof typeof fighter] as number;
+    // Apply improvement with ±20% variance, no artificial cap
     const variance = config.improvement * (0.8 + Math.random() * 0.4);
-    const actualImprovement = parseFloat(Math.min(0.05, variance).toFixed(4));
+    // Clamp so stat doesn't exceed 0.99
+    const actualImprovement = parseFloat(Math.min(0.99 - currentVal, variance).toFixed(4));
     const newVal = parseFloat(Math.min(0.99, currentVal + actualImprovement).toFixed(4));
 
     const [updatedFighter] = await db

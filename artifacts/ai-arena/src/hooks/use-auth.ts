@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 export function useAuthSession() {
   return useGetSession({
     query: {
+      queryKey: getGetSessionQueryKey(),
       retry: false,
       staleTime: 5 * 60 * 1000,
     }
