@@ -17,10 +17,12 @@ export default function ArenaPage() {
   const [activeBattle, setActiveBattle] = useState<Battle | null>(null);
 
   const myFighters = myFightersData?.fighters || [];
-  // Filter out my fighters from opponents list
-  const opponents = (allFightersData?.fighters || []).filter(
-    f => !myFighters.some(my => my.id === f.id)
-  );
+  // All fighters (including own) are valid opponents — important for single-wallet demo
+  const allFighters = allFightersData?.fighters || [];
+  // Opponents: exclude the fighter already selected as fighter 1
+  const opponents = selectedFighter1
+    ? allFighters.filter(f => f.id !== selectedFighter1)
+    : allFighters;
 
   const handleBattle = () => {
     if (!selectedFighter1 || !selectedFighter2) return;

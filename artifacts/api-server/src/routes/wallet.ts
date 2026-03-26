@@ -52,35 +52,40 @@ router.post("/wallet/stake", async (req, res) => {
 
     if (amount <= 0) return res.status(400).json({ error: "Amount must be positive" });
 
-    const wallet = await db.query.walletsTable.findFirst({
-      where: eq(walletsTable.id, auth.walletId),
-    });
+    // Atomic: wallet update + transaction insert
+    const updated = await db.transaction(async (tx) => {
+      const wallet = await tx.query.walletsTable.findFirst({
+        where: eq(walletsTable.id, auth.walletId),
+      });
+      if (!wallet || wallet.balance < amount) {
+        throw new Error("Insufficient balance");
+      }
 
-    if (!wallet || wallet.balance < amount) {
-      return res.status(400).json({ error: "Insufficient balance" });
-    }
+      const [w] = await tx
+        .update(walletsTable)
+        .set({
+          balance: wallet.balance - amount,
+          stakedAmount: wallet.stakedAmount + amount,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletsTable.id, auth.walletId))
+        .returning();
 
-    const [updated] = await db
-      .update(walletsTable)
-      .set({
-        balance: wallet.balance - amount,
-        stakedAmount: wallet.stakedAmount + amount,
-        updatedAt: new Date(),
-      })
-      .where(eq(walletsTable.id, auth.walletId))
-      .returning();
+      await tx.insert(transactionsTable).values({
+        walletId: auth.walletId,
+        type: "STAKE",
+        amount: -amount,
+        description: `Staked ${amount} ONE`,
+      });
 
-    await db.insert(transactionsTable).values({
-      walletId: auth.walletId,
-      type: "STAKE",
-      amount: -amount,
-      description: `Staked ${amount} ONE`,
+      return w;
     });
 
     return res.json(updated);
-  } catch (err) {
+  } catch (err: unknown) {
     req.log.error({ err }, "Error staking");
-    return res.status(400).json({ error: "Failed to stake" });
+    const message = err instanceof Error ? err.message : "Failed to stake";
+    return res.status(400).json({ error: message });
   }
 });
 
@@ -94,47 +99,52 @@ router.post("/wallet/unstake", async (req, res) => {
 
     if (amount <= 0) return res.status(400).json({ error: "Amount must be positive" });
 
-    const wallet = await db.query.walletsTable.findFirst({
-      where: eq(walletsTable.id, auth.walletId),
+    // Atomic: wallet update + transaction inserts
+    const updated = await db.transaction(async (tx) => {
+      const wallet = await tx.query.walletsTable.findFirst({
+        where: eq(walletsTable.id, auth.walletId),
+      });
+      if (!wallet || wallet.stakedAmount < amount) {
+        throw new Error("Insufficient staked amount");
+      }
+
+      const stakingReward = parseFloat((amount * 0.05).toFixed(4));
+
+      const [w] = await tx
+        .update(walletsTable)
+        .set({
+          balance: wallet.balance + amount + stakingReward,
+          stakedAmount: wallet.stakedAmount - amount,
+          stakingRewards: wallet.stakingRewards + stakingReward,
+          totalEarned: wallet.totalEarned + stakingReward,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletsTable.id, auth.walletId))
+        .returning();
+
+      await tx.insert(transactionsTable).values([
+        {
+          walletId: auth.walletId,
+          type: "UNSTAKE",
+          amount,
+          description: `Unstaked ${amount} ONE`,
+        },
+        {
+          walletId: auth.walletId,
+          type: "STAKING_REWARD",
+          amount: stakingReward,
+          description: `Staking reward: ${stakingReward} ONE`,
+        },
+      ]);
+
+      return w;
     });
 
-    if (!wallet || wallet.stakedAmount < amount) {
-      return res.status(400).json({ error: "Insufficient staked amount" });
-    }
-
-    const stakingReward = parseFloat((amount * 0.05).toFixed(4));
-
-    const [updated] = await db
-      .update(walletsTable)
-      .set({
-        balance: wallet.balance + amount + stakingReward,
-        stakedAmount: wallet.stakedAmount - amount,
-        stakingRewards: wallet.stakingRewards + stakingReward,
-        totalEarned: wallet.totalEarned + stakingReward,
-        updatedAt: new Date(),
-      })
-      .where(eq(walletsTable.id, auth.walletId))
-      .returning();
-
-    await db.insert(transactionsTable).values([
-      {
-        walletId: auth.walletId,
-        type: "UNSTAKE",
-        amount,
-        description: `Unstaked ${amount} ONE`,
-      },
-      {
-        walletId: auth.walletId,
-        type: "STAKING_REWARD",
-        amount: stakingReward,
-        description: `Staking reward: ${stakingReward} ONE`,
-      },
-    ]);
-
     return res.json(updated);
-  } catch (err) {
+  } catch (err: unknown) {
     req.log.error({ err }, "Error unstaking");
-    return res.status(400).json({ error: "Failed to unstake" });
+    const message = err instanceof Error ? err.message : "Failed to unstake";
+    return res.status(400).json({ error: message });
   }
 });
 

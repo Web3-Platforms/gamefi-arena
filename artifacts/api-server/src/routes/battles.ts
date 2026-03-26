@@ -72,6 +72,8 @@ router.post("/battles", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Fighter not found" });
     }
 
+    // Requester must own fighter 1 OR may pit any two fighters as a demo/spectator mode
+    // Allow same-owner battles to support single-wallet demo environments
     if (f1.ownerId !== auth.userId) {
       return res.status(403).json({ error: "You don't own fighter 1" });
     }

@@ -82,7 +82,7 @@ router.get("/fighters/all", async (req, res) => {
 router.get("/fighters/:id", async (req, res) => {
   try {
     const fighter = await db.query.fightersTable.findFirst({
-      where: eq(fightersTable.id, req.params.id),
+      where: eq(fightersTable.id, String(req.params.id)),
     });
     if (!fighter) return res.status(404).json({ error: "Fighter not found" });
     return res.json(fighter);
@@ -99,57 +99,63 @@ router.post("/fighters", async (req, res) => {
 
     const body = MintFighterBody.parse(req.body);
 
-    const wallet = await db.query.walletsTable.findFirst({
-      where: eq(walletsTable.id, auth.walletId),
-    });
-    if (!wallet || wallet.balance < MINT_COST) {
-      return res.status(400).json({ error: `Insufficient balance. Minting costs ${MINT_COST} ONE.` });
-    }
-
     const txHash = genTxHash();
     const tokenId = genTokenId();
     const color = body.color ?? `hsl(${Math.floor(Math.random() * 360)}, 70%, 60%)`;
 
-    const [fighter] = await db
-      .insert(fightersTable)
-      .values({
-        tokenId,
-        name: body.name,
-        description: body.description ?? null,
-        ownerId: auth.userId,
-        aggression: randomStat(),
-        defense: randomStat(),
-        speed: randomStat(),
-        power: randomStat(),
-        intelligence: randomStat(),
-        color,
-        txHash,
-        isMinted: true,
-        updatedAt: new Date(),
-      })
-      .returning();
+    // Wrap fighter mint + wallet debit + transaction in a single DB transaction
+    const fighter = await db.transaction(async (tx) => {
+      const wallet = await tx.query.walletsTable.findFirst({
+        where: eq(walletsTable.id, auth.walletId),
+      });
+      if (!wallet || wallet.balance < MINT_COST) {
+        throw new Error(`Insufficient balance. Minting costs ${MINT_COST} ONE.`);
+      }
 
-    await db
-      .update(walletsTable)
-      .set({
-        balance: wallet.balance - MINT_COST,
-        totalSpent: wallet.totalSpent + MINT_COST,
-        updatedAt: new Date(),
-      })
-      .where(eq(walletsTable.id, auth.walletId));
+      const [newFighter] = await tx
+        .insert(fightersTable)
+        .values({
+          tokenId,
+          name: body.name,
+          description: body.description ?? null,
+          ownerId: auth.userId,
+          aggression: randomStat(),
+          defense: randomStat(),
+          speed: randomStat(),
+          power: randomStat(),
+          intelligence: randomStat(),
+          color,
+          txHash,
+          isMinted: true,
+          updatedAt: new Date(),
+        })
+        .returning();
 
-    await db.insert(transactionsTable).values({
-      walletId: auth.walletId,
-      type: "MINT_FIGHTER",
-      amount: -MINT_COST,
-      description: `Minted fighter: ${body.name}`,
-      fighterId: fighter!.id,
+      await tx
+        .update(walletsTable)
+        .set({
+          balance: wallet.balance - MINT_COST,
+          totalSpent: wallet.totalSpent + MINT_COST,
+          updatedAt: new Date(),
+        })
+        .where(eq(walletsTable.id, auth.walletId));
+
+      await tx.insert(transactionsTable).values({
+        walletId: auth.walletId,
+        type: "MINT_FIGHTER",
+        amount: -MINT_COST,
+        description: `Minted fighter: ${body.name}`,
+        fighterId: newFighter!.id,
+      });
+
+      return newFighter;
     });
 
     return res.status(201).json(fighter);
-  } catch (err) {
+  } catch (err: unknown) {
     req.log.error({ err }, "Error minting fighter");
-    return res.status(400).json({ error: "Failed to mint fighter" });
+    const message = err instanceof Error ? err.message : "Failed to mint fighter";
+    return res.status(400).json({ error: message });
   }
 });
 
