@@ -88,7 +88,15 @@ export default function Home() {
   );
 }
 
-function StatBox({ icon: Icon, label, value, loading, color = "text-primary" }: any) {
+interface StatBoxProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number | string;
+  loading: boolean;
+  color?: string;
+}
+
+function StatBox({ icon: Icon, label, value, loading, color = "text-primary" }: StatBoxProps) {
   return (
     <div className="bg-card/40 border border-white/5 p-6 clip-angled flex flex-col items-center text-center hover:bg-card/60 transition-colors">
       <Icon className={`w-8 h-8 ${color} mb-3`} />

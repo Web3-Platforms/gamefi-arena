@@ -31,14 +31,17 @@ export function BattleReplay({ battle, onComplete }: BattleReplayProps) {
 
   const currentLog = roundIdx >= 0 && roundIdx < logs.length ? logs[roundIdx] : null;
   const isEnd = roundIdx >= logs.length;
-  
-  // Calculate current HP
-  const f1Hp = currentLog ? currentLog.fighter1Hp : (isEnd ? battle.fighter1FinalHp : 100);
-  const f2Hp = currentLog ? currentLog.fighter2Hp : (isEnd ? battle.fighter2FinalHp : 100);
 
-  // We assume max HP is 100 for the visual bars
-  const f1HpPercent = Math.max(0, Math.min(100, f1Hp));
-  const f2HpPercent = Math.max(0, Math.min(100, f2Hp));
+  // Combat engine uses MAX_HP = 1000
+  const MAX_HP = 1000;
+
+  // Calculate current HP
+  const f1Hp = currentLog ? currentLog.fighter1Hp : (isEnd ? battle.fighter1FinalHp : MAX_HP);
+  const f2Hp = currentLog ? currentLog.fighter2Hp : (isEnd ? battle.fighter2FinalHp : MAX_HP);
+
+  // Convert to percentage using actual max HP
+  const f1HpPercent = Math.max(0, Math.min(100, (f1Hp / MAX_HP) * 100));
+  const f2HpPercent = Math.max(0, Math.min(100, (f2Hp / MAX_HP) * 100));
 
   return (
     <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-xl flex flex-col overflow-hidden scanline">

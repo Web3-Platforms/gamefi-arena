@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { usersTable, walletsTable, fightersTable, transactionsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -26,7 +26,7 @@ function randomStat(base = 0.3): number {
   return parseFloat(Math.min(0.95, Math.max(0.1, base + Math.random() * 0.5)).toFixed(3));
 }
 
-async function requireUser(req: any, res: any): Promise<{ userId: string; walletId: string } | null> {
+async function requireUser(req: Request, res: Response): Promise<{ userId: string; walletId: string } | null> {
   const walletAddress = getWalletFromCookie(req);
   if (!walletAddress) {
     res.status(401).json({ error: "Not authenticated" });
