@@ -25,7 +25,14 @@ app.use(
     },
   }),
 );
-app.use(cors());
+// Same-origin path-based routing via Replit proxy; CORS credentials enabled
+// for any environment where frontend and API may be split across origins.
+app.use(
+  cors({
+    origin: (origin, cb) => cb(null, true),
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
