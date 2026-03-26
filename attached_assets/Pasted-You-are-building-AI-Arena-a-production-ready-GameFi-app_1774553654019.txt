@@ -1,0 +1,196 @@
+You are building AI Arena, a production-ready GameFi application for the OneHack 3.0 hackathon (AI & GameFi Edition) on OneChain. This is a competition submission that MUST be fully functional and polished.
+
+## HACKATHON DETAILS
+- Name: OneHack 3.0 - AI & GameFi Edition
+- Organizer: OneChain
+- Platform: DoraHacks
+- Prize Pool: $16,100+ USDT
+- Deadline: March 27, 2026 at 16:59 UTC
+- Submission URL: https://dorahacks.io/hackathon/onehackathon
+
+## JUDGING CRITERIA (MUST OPTIMIZE FOR)
+1. Originality (25%) - Novel AI + blockchain gaming concept
+2. Execution (30%) - Working MVP with clean code
+3. Usability (25%) - Intuitive UI/UX
+4. Ecosystem Alignment (20%) - OneChain Move integration
+
+## PROJECT CONCEPT
+AI Arena is a next-generation GameFi platform where players:
+- Mint AI-powered NFT fighters with unique neural network parameters
+- Train fighters to improve AI stats (Aggression, Defense, Speed, Power, Intelligence)
+- Battle against other AI fighters with simulated combat
+- Earn ONE tokens through victories and training
+- Evolve fighters through leveling and experience
+
+## TECHNICAL STACK (REQUIRED)
+- Frontend: Next.js 14+ with App Router, TypeScript, Tailwind CSS, shadcn/ui
+- Backend: Next.js API Routes or Express.js
+- Database: PostgreSQL with Prisma ORM
+- Authentication: NextAuth.js with wallet connection (MetaMask, Petra wallet for OneChain)
+- Blockchain: OneChain Testnet integration (Move smart contract simulation)
+- AI Engine: Client-side neural network simulation with TensorFlow.js
+- Real-time: Socket.io for live battle spectator mode
+
+## DATABASE SCHEMA (PostgreSQL + Prisma)
+
+```prisma
+// User with wallet
+model User {
+  id            String   @id @default(cuid())
+  walletAddress String   @unique
+  nonce         String?  // For wallet signature verification
+  createdAt     DateTime @default(now())
+  fighters      Fighter[]
+  wallets       Wallet[]
+}
+
+// AI Fighter NFT
+model Fighter {
+  id            String   @id @default(cuid())
+  tokenId       String   @unique  // NFT token ID
+  name          String
+  description   String?
+  imageUrl      String?
+  
+  // Owner
+  ownerId       String
+  owner         User     @relation(fields: [ownerId], references: [id])
+  
+  // AI Neural Network Parameters (0.0 - 1.0)
+  aggression    Float    @default(0.5)
+  defense       Float    @default(0.5)
+  speed         Float    @default(0.5)
+  power         Float    @default(0.5)
+  intelligence  Float    @default(0.5)
+  
+  // Battle Stats
+  level         Int      @default(1)
+  experience    Int      @default(0)
+  wins          Int      @default(0)
+  losses        Int      @default(0)
+  totalBattles  Int      @default(0)
+  
+  // Training
+  trainingCount Int      @default(0)
+  lastTrainedAt DateTime?
+  
+  // Visual customization
+  color         String   @default("#3B82F6")
+  skinId        String?
+  
+  // Blockchain
+  txHash        String?  // Mint transaction hash
+  isMinted      Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  battlesAsFighter1  Battle[] @relation("Fighter1Battles")
+  battlesAsFighter2  Battle[] @relation("Fighter2Battles")
+}
+
+// Battle Record
+model Battle {
+  id            String   @id @default(cuid())
+  
+  fighter1Id    String
+  fighter2Id    String
+  fighter1      Fighter  @relation("Fighter1Battles", fields: [fighter1Id], references: [id])
+  fighter2      Fighter  @relation("Fighter2Battles", fields: [fighter2Id], references: [id])
+  
+  // Results
+  winnerId      String?
+  loserId       String?
+  rounds        Int      @default(0)
+  fighter1FinalHp Int    @default(0)
+  fighter2FinalHp Int    @default(0)
+  
+  // Battle replay data (JSON)
+  battleLog     Json?    // Array of moves for replay
+  
+  // Rewards
+  prizePool     Float    @default(0)
+  winnerReward  Float    @default(0)
+  
+  // Status
+  status        BattleStatus @default(PENDING)
+  
+  // Timestamps
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+}
+
+enum BattleStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ONE Token Wallet
+model Wallet {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  balance       Float    @default(100.0)  // Starting balance
+  totalEarned   Float    @default(0)
+  totalSpent    Float    @default(0)
+  
+  // Staking
+  stakedAmount  Float    @default(0)
+  stakingRewards Float   @default(0)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  transactions  Transaction[]
+}
+
+// Transaction History
+model Transaction {
+  id            String   @id @default(cuid())
+  walletId      String
+  wallet        Wallet   @relation(fields: [walletId], references: [id])
+  
+  type          TransactionType
+  amount        Float
+  description   String?
+  
+  // Related entities
+  battleId      String?
+  fighterId     String?
+  
+  createdAt     DateTime @default(now())
+}
+
+enum TransactionType {
+  MINT_FIGHTER
+  TRAIN_FIGHTER
+  BATTLE_REWARD
+  BATTLE_ENTRY
+  STAKE
+  UNSTAKE
+  STAKING_REWARD
+}
+
+// Training Queue (for async training)
+model TrainingSession {
+  id            String   @id @default(cuid())
+  fighterId     String
+  type          TrainingType
+  statImproved  String?
+  improvement   Float    @default(0)
+  cost          Float
+  status        String   @default("pending")
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+}
+
+enum TrainingType {
+  BASIC
+  ADVANCED
+  INTENSIVE
+  AI_OPTIMIZED
+}
