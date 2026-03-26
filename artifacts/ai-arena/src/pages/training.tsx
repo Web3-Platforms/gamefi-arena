@@ -4,37 +4,38 @@ import { CyberButton } from "@/components/CyberUI";
 import { FighterCard } from "@/components/FighterCard";
 import { Dumbbell, Zap, Shield, Target, Brain, Bot, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TrainFighterRequestType, TrainFighterRequestStat } from "@workspace/api-client-react";
 
-const STATS = [
-  { id: "aggression", label: "Aggression", icon: Target, color: "#ff003c" },
-  { id: "defense", label: "Defense", icon: Shield, color: "#00f0ff" },
-  { id: "speed", label: "Speed", icon: Zap, color: "#fff000" },
-  { id: "power", label: "Power", icon: Dumbbell, color: "#ff8a00" },
-  { id: "intelligence", label: "Intelligence", icon: Brain, color: "#b026ff" },
+const STATS: Array<{ id: TrainFighterRequestStat; label: string; icon: typeof Target; color: string }> = [
+  { id: TrainFighterRequestStat.aggression, label: "Aggression", icon: Target, color: "#ff003c" },
+  { id: TrainFighterRequestStat.defense, label: "Defense", icon: Shield, color: "#00f0ff" },
+  { id: TrainFighterRequestStat.speed, label: "Speed", icon: Zap, color: "#fff000" },
+  { id: TrainFighterRequestStat.power, label: "Power", icon: Dumbbell, color: "#ff8a00" },
+  { id: TrainFighterRequestStat.intelligence, label: "Intelligence", icon: Brain, color: "#b026ff" },
 ];
 
-const TRAINING_TIERS = [
-  { id: "BASIC", name: "Basic Algorithm", cost: 5, boost: "~2%" },
-  { id: "ADVANCED", name: "Advanced Heuristics", cost: 15, boost: "~5%" },
-  { id: "INTENSIVE", name: "Intensive Deep Learning", cost: 30, boost: "~12%" },
-  { id: "AI_OPTIMIZED", name: "Quantum Optimization", cost: 50, boost: "~25%" },
+const TRAINING_TIERS: Array<{ id: TrainFighterRequestType; name: string; cost: number; boost: string }> = [
+  { id: TrainFighterRequestType.BASIC, name: "Basic Algorithm", cost: 5, boost: "~2%" },
+  { id: TrainFighterRequestType.ADVANCED, name: "Advanced Heuristics", cost: 15, boost: "~5%" },
+  { id: TrainFighterRequestType.INTENSIVE, name: "Intensive Deep Learning", cost: 30, boost: "~12%" },
+  { id: TrainFighterRequestType.AI_OPTIMIZED, name: "Quantum Optimization", cost: 50, boost: "~25%" },
 ];
 
 export default function TrainingPage() {
   const { data: fightersResponse, isLoading } = useMyFighters();
   const { mutate: train, isPending } = useTrainFighterHook();
-  
+
   const [selectedFighter, setSelectedFighter] = useState<string | null>(null);
-  const [selectedStat, setSelectedStat] = useState<string>("aggression");
+  const [selectedStat, setSelectedStat] = useState<TrainFighterRequestStat>(TrainFighterRequestStat.aggression);
 
   const fighters = fightersResponse?.fighters || [];
-  const activeFighter = fighters.find(f => f.id === selectedFighter);
+  const activeFighter = fighters.find((f) => f.id === selectedFighter);
 
-  const handleTrain = (tierId: string) => {
+  const handleTrain = (tierId: TrainFighterRequestType) => {
     if (!activeFighter) return;
     train({
       id: activeFighter.id,
-      data: { type: tierId as any, stat: selectedStat as any }
+      data: { type: tierId, stat: selectedStat },
     });
   };
 

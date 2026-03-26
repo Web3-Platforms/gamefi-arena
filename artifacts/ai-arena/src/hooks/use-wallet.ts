@@ -5,7 +5,8 @@ import {
   useStakeTokens,
   useUnstakeTokens,
   getGetWalletQueryKey,
-  getListTransactionsQueryKey
+  getListTransactionsQueryKey,
+  type ErrorType,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,7 +21,7 @@ export function useTransactions() {
 export function useStakeHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useStakeTokens({
     mutation: {
       onSuccess: () => {
@@ -31,21 +32,21 @@ export function useStakeHook() {
           description: "Your ONE tokens are now earning rewards.",
         });
       },
-      onError: (err: any) => {
+      onError: (err: ErrorType<unknown>) => {
         toast({
           title: "Staking Failed",
           description: err.message || "Failed to stake tokens.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }
-    }
+      },
+    },
   });
 }
 
 export function useUnstakeHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useUnstakeTokens({
     mutation: {
       onSuccess: () => {
@@ -56,13 +57,13 @@ export function useUnstakeHook() {
           description: "Your ONE tokens have been returned to your balance.",
         });
       },
-      onError: (err: any) => {
+      onError: (err: ErrorType<unknown>) => {
         toast({
           title: "Unstaking Failed",
           description: err.message || "Failed to unstake tokens.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }
-    }
+      },
+    },
   });
 }

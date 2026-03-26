@@ -4,9 +4,10 @@ import {
   useCreateBattle,
   useGetBattle,
   getListBattlesQueryKey,
+  getListFightersQueryKey,
+  getGetWalletQueryKey,
+  type ErrorType,
 } from "@workspace/api-client-react";
-import { getListFightersQueryKey } from "@workspace/api-client-react";
-import { getGetWalletQueryKey } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function useBattleHistory() {
@@ -20,7 +21,7 @@ export function useBattle(id: string) {
 export function useCreateBattleHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useCreateBattle({
     mutation: {
       onSuccess: () => {
@@ -28,13 +29,13 @@ export function useCreateBattleHook() {
         qc.invalidateQueries({ queryKey: getListFightersQueryKey() });
         qc.invalidateQueries({ queryKey: getGetWalletQueryKey() });
       },
-      onError: (err: any) => {
+      onError: (err: ErrorType<unknown>) => {
         toast({
           title: "Battle Initiation Failed",
           description: err.message || "Could not start the battle.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }
-    }
+      },
+    },
   });
 }

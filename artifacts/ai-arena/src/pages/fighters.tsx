@@ -97,7 +97,7 @@ export default function FightersPage() {
           </div>
 
           <CyberButton type="submit" className="w-full mt-6" disabled={isMinting || !mintName.trim()}>
-            {isMinting ? "Initializing..." : "Mint NFT (Cost: Free)"}
+            {isMinting ? "Initializing..." : "Mint Fighter (Cost: 10 ONE)"}
           </CyberButton>
         </form>
       </CyberModal>

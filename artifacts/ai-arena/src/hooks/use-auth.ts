@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { 
-  useGetSession, 
-  useConnectWallet, 
+import {
+  useGetSession,
+  useConnectWallet,
   useDisconnectWallet,
-  getGetSessionQueryKey 
+  getGetSessionQueryKey,
+  type ErrorType,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,38 +14,38 @@ export function useAuthSession() {
       queryKey: getGetSessionQueryKey(),
       retry: false,
       staleTime: 5 * 60 * 1000,
-    }
+    },
   });
 }
 
 export function useConnectHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useConnectWallet({
     mutation: {
       onSuccess: (data) => {
         qc.setQueryData(getGetSessionQueryKey(), { user: data.user, wallet: data.wallet });
         toast({
           title: "Wallet Connected",
-          description: `Welcome back to the Arena.`,
+          description: "Welcome back to the Arena.",
         });
       },
-      onError: (err: any) => {
+      onError: (err: ErrorType<unknown>) => {
         toast({
           title: "Connection Failed",
           description: err.message || "Could not connect wallet.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }
-    }
+      },
+    },
   });
 }
 
 export function useDisconnectHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useDisconnectWallet({
     mutation: {
       onSuccess: () => {
@@ -55,7 +56,7 @@ export function useDisconnectHook() {
           title: "Disconnected",
           description: "Wallet safely disconnected.",
         });
-      }
-    }
+      },
+    },
   });
 }

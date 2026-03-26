@@ -7,7 +7,8 @@ import {
   useTrainFighter,
   getListFightersQueryKey,
   getListAllFightersQueryKey,
-  getGetFighterQueryKey
+  getGetFighterQueryKey,
+  type ErrorType,
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,7 +27,7 @@ export function useFighter(id: string) {
 export function useMintFighterHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useMintFighter({
     mutation: {
       onSuccess: () => {
@@ -37,21 +38,21 @@ export function useMintFighterHook() {
           description: "A new AI warrior joins your roster.",
         });
       },
-      onError: (err: any) => {
+      onError: (err: ErrorType<unknown>) => {
         toast({
           title: "Minting Failed",
           description: err.message || "Failed to mint fighter.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }
-    }
+      },
+    },
   });
 }
 
 export function useTrainFighterHook() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  
+
   return useTrainFighter({
     mutation: {
       onSuccess: (data, variables) => {
@@ -62,13 +63,13 @@ export function useTrainFighterHook() {
           description: `${data.fighter.name} improved ${data.statImproved} by +${(data.improvement * 100).toFixed(1)}%!`,
         });
       },
-      onError: (err: any) => {
+      onError: (err: ErrorType<unknown>) => {
         toast({
           title: "Training Failed",
           description: err.message || "Not enough ONE tokens or server error.",
-          variant: "destructive"
+          variant: "destructive",
         });
-      }
-    }
+      },
+    },
   });
 }
