@@ -33,8 +33,7 @@ router.get("/wallet/transactions", async (req, res) => {
       .select()
       .from(transactionsTable)
       .where(eq(transactionsTable.walletId, auth.walletId))
-      .orderBy(desc(transactionsTable.createdAt))
-      .limit(50);
+      .orderBy(desc(transactionsTable.createdAt));
 
     return res.json({ transactions });
   } catch (err) {

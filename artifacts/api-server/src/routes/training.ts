@@ -59,13 +59,17 @@ router.post("/fighters/:id/train", async (req, res) => {
     const actualImprovement = parseFloat(Math.min(0.99 - currentVal, variance).toFixed(4));
     const newVal = parseFloat(Math.min(0.99, currentVal + actualImprovement).toFixed(4));
 
+    const newExperience = fighter.experience + Math.ceil(config.cost / 2);
+    const newLevel = Math.floor(newExperience / 100) + 1;
+
     const [updatedFighter] = await db
       .update(fightersTable)
       .set({
         [stat]: newVal,
         trainingCount: fighter.trainingCount + 1,
         lastTrainedAt: new Date(),
-        experience: fighter.experience + Math.ceil(config.cost / 2),
+        experience: newExperience,
+        level: newLevel,
         updatedAt: new Date(),
       })
       .where(eq(fightersTable.id, fighter.id))
