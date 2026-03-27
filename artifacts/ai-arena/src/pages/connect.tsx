@@ -18,9 +18,10 @@ export default function ConnectPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!address.trim()) return;
-    localStorage.setItem("walletAddress", address);
-    connect({ data: { walletAddress: address } });
+    const trimmedAddress = address.trim();
+    if (!trimmedAddress) return;
+    localStorage.setItem("walletAddress", trimmedAddress);
+    connect({ data: { walletAddress: trimmedAddress } });
   };
 
   return (
