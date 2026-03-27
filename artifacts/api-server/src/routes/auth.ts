@@ -16,7 +16,11 @@ const router: IRouter = Router();
 router.post("/auth/connect", async (req, res) => {
   try {
     const body = ConnectWalletBody.parse(req.body);
-    const { walletAddress } = body;
+    const walletAddress = body.walletAddress.trim();
+
+    if (!walletAddress) {
+      return res.status(400).json({ error: "Wallet address cannot be empty" });
+    }
 
     let user = await db.query.usersTable.findFirst({
       where: eq(usersTable.walletAddress, walletAddress),
@@ -47,10 +51,10 @@ router.post("/auth/connect", async (req, res) => {
 
     const sessionId = await createSession(user.id);
     setSessionCookie(res, sessionId);
-    res.json({ user, wallet, isNew });
+    return res.json({ user, wallet, isNew });
   } catch (err) {
     req.log.error({ err }, "Error connecting wallet");
-    res.status(400).json({ error: "Invalid request" });
+    return res.status(400).json({ error: "Invalid request" });
   }
 });
 
