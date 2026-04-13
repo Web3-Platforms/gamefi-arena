@@ -1,0 +1,39 @@
+name: Deploy to Replit
+
+on:
+  push:
+    branches: ["main"]
+
+  # Allow manual re-deployment from the GitHub Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Trigger Replit Redeployment
+    runs-on: ubuntu-latest
+    permissions: {}    # no GitHub token permissions needed — only calls Replit webhook
+    needs: []          # runs independently; add "typecheck-and-build" here if you
+                       # want CI to pass first (requires both workflows in one file
+                       # or a workflow_run trigger)
+
+    steps:
+      - name: Trigger Replit deploy hook
+        # The REPLIT_DEPLOY_HOOK secret must be set in
+        # Settings → Secrets → Actions for this repository.
+        # Obtain the webhook URL from Replit:
+        #   Replit project → Deployments → Autoscale → "Deploy hook" section.
+        run: |
+          if [ -z "${{ secrets.REPLIT_DEPLOY_HOOK }}" ]; then
+            echo "⚠️  REPLIT_DEPLOY_HOOK secret is not configured."
+            echo "   Add it in GitHub → Settings → Secrets → Actions."
+            echo "   Get the URL from Replit → Deployments → Deploy hook."
+            exit 1
+          fi
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.REPLIT_DEPLOY_HOOK }}")
+          echo "Replit deploy hook responded with HTTP $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
+            echo "❌ Deploy hook call failed (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+          echo "✅ Replit redeployment triggered successfully"
